@@ -78,35 +78,14 @@ class EnkripsiView extends GetView<EnkripsiController> {
                             thickness: 1,
                             color: primaryColor,
                           ),
-                        if (controller.modeCustom.isFalse)
-                          ...controller.listFormatDefault
-                              .map(
-                                (format) => Column(
-                                  children: [
-                                    TextFormField(
-                                      controller: format.textEditingController,
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius:
-                                              BorderRadius.all(Radius.zero),
-                                        ),
-                                        labelText: format.label,
-                                      ),
-                                      keyboardType: format.textInputType,
-                                      textInputAction: TextInputAction.next,
-                                    ),
-                                    const SizedBox(height: 8),
-                                  ],
-                                ),
-                              )
-                              .toList()
-                        else if (controller.listFormatCustom.isNotEmpty)
-                          ...controller.listFormatCustom
+                        if (controller.listFormat.isNotEmpty)
+                          ...controller.listFormat
                               .map(
                                 (format) => Column(
                                   children: <Widget>[
                                     TextFormField(
                                       controller: format.textEditingController,
+                                      focusNode: format.focusNode,
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
                                           borderRadius:
@@ -116,6 +95,14 @@ class EnkripsiView extends GetView<EnkripsiController> {
                                       ),
                                       keyboardType: format.textInputType,
                                       textInputAction: TextInputAction.next,
+                                      inputFormatters: format.inputFormatters,
+                                      readOnly: format.textInputType.index == 4,
+                                      onTap: () {
+                                        format.textInputType.index != 4
+                                            ? null
+                                            : controller.showCalendar(
+                                                format.textEditingController);
+                                      },
                                     ),
                                     const SizedBox(height: 8),
                                   ],
@@ -142,6 +129,7 @@ class EnkripsiView extends GetView<EnkripsiController> {
                   ),
                   child: TextField(
                     controller: controller.controllerKey,
+                    focusNode: controller.focusNodeKey,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.all(Radius.zero),

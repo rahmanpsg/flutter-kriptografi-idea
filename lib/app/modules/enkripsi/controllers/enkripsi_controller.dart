@@ -4,7 +4,9 @@ import 'dart:io';
 
 import 'dart:ui' as ui;
 
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:get/get.dart';
 import 'package:ionicons/ionicons.dart';
@@ -19,18 +21,31 @@ import 'package:share_plus/share_plus.dart';
 
 class EnkripsiController extends GetxController {
   late final IDEA _idea;
+  late String plainText;
   late String cipherText;
 
   late QrCode qrCode;
   late QrPainter qrPainter;
   late String? _pathQrCode;
 
+  RxBool modeCustom = false.obs;
+
   final List<FormatModel> listFormatDefault = [
     FormatModel(
-        label: "Nomor Kartu Keluarga", textInputType: TextInputType.phone),
+      label: "Nomor Kartu Keluarga",
+      textInputType: TextInputType.phone,
+      inputFormatters: [
+        LengthLimitingTextInputFormatter(16),
+        FilteringTextInputFormatter.digitsOnly
+      ],
+    ),
     FormatModel(
       label: "Nomor Induk Kependudukan",
       textInputType: TextInputType.number,
+      inputFormatters: [
+        LengthLimitingTextInputFormatter(16),
+        FilteringTextInputFormatter.digitsOnly
+      ],
     ),
     FormatModel(
       label: "Tanggal/Bulan/Tahun Lahir",
@@ -43,10 +58,18 @@ class EnkripsiController extends GetxController {
     FormatModel(
       label: "NIK Ibu Kandung",
       textInputType: TextInputType.number,
+      inputFormatters: [
+        LengthLimitingTextInputFormatter(16),
+        FilteringTextInputFormatter.digitsOnly
+      ],
     ),
     FormatModel(
       label: "NIK Ayah Kandung",
       textInputType: TextInputType.number,
+      inputFormatters: [
+        LengthLimitingTextInputFormatter(16),
+        FilteringTextInputFormatter.digitsOnly
+      ],
     ),
     FormatModel(
       label: "Catatan Peristiwa Penting",
@@ -56,9 +79,12 @@ class EnkripsiController extends GetxController {
 
   final RxList<FormatModel> listFormatCustom = <FormatModel>[].obs;
 
-  late final TextEditingController controllerKey;
+  List<FormatModel> get listFormat =>
+      modeCustom.isFalse ? listFormatDefault : listFormatCustom;
 
-  RxBool modeCustom = false.obs;
+  late final FocusNode focusNodeKey;
+  late final TextEditingController controllerKey;
+  late final TextEditingController controllerPlainText;
 
   final List<Map<String, dynamic>> listInputType = [
     {"name": "Teks", "value": TextInputType.text},
@@ -72,7 +98,9 @@ class EnkripsiController extends GetxController {
   void onInit() {
     _idea = IDEA();
 
+    focusNodeKey = FocusNode();
     controllerKey = TextEditingController();
+    controllerPlainText = TextEditingController();
 
     controllerTambahLabel = TextEditingController();
     controllerTambahTipe = TextEditingController();
@@ -110,12 +138,13 @@ class EnkripsiController extends GetxController {
       // Validasi
       validasiFormFormat(listFormat, listFormatData);
 
-      String plainText = jsonEncode(listFormatData);
+      plainText = jsonEncode(listFormatData);
 
       String kunci = controllerKey.text;
 
       // Periksa jika kunci tidak kosong
       if (kunci.isEmpty) {
+        FocusScope.of(Get.context!).requestFocus(focusNodeKey);
         showMessage(message: "Kunci harus diisi!", error: true);
         return;
       }
@@ -127,9 +156,11 @@ class EnkripsiController extends GetxController {
 
       // Jika QR code berhasil dibuat
       if (success) {
+        controllerPlainText.text = plainText;
         Get.toNamed(Routes.HASIL_ENKRIPSI);
         resetFormFormat(listFormat);
         controllerKey.clear();
+        FocusScope.of(Get.context!).unfocus();
       }
     } catch (e) {
       showMessage(message: e.toString(), error: true);
@@ -137,13 +168,27 @@ class EnkripsiController extends GetxController {
   }
 
   void validasiFormFormat(
-      List<FormatModel> listFormat, List<Map<String, dynamic>> listFormatData) {
+    List<FormatModel> listFormat,
+    List<Map<String, dynamic>> listFormatData,
+  ) {
     if (listFormat.isEmpty) throw ("Silahkan tambahkan format terlebih dahulu");
 
     for (var format in listFormat) {
       // Validasi
       if (format.textEditingController.text.isEmpty) {
+        FocusScope.of(Get.context!).requestFocus(format.focusNode);
+
         throw ("${format.label} harus diisi!");
+      }
+
+      for (var inputFormatter in format.inputFormatters) {
+        if (inputFormatter is LengthLimitingTextInputFormatter &&
+            format.textEditingController.text.length !=
+                inputFormatter.maxLength) {
+          FocusScope.of(Get.focusScope!.context!)
+              .requestFocus(format.focusNode);
+          throw ("${format.label} harus ${inputFormatter.maxLength} angka");
+        }
       }
 
       listFormatData.add(format.toJson());
@@ -319,6 +364,19 @@ class EnkripsiController extends GetxController {
     } catch (e) {
       log(e.toString());
       showMessage(message: e.toString(), error: true);
+    }
+  }
+
+  void showCalendar(TextEditingController controller) async {
+    DateTime? dateTime = await showDatePicker(
+      context: Get.context!,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+
+    if (dateTime != null) {
+      controller.text = DateFormat('dd/MM/yyyy').format(dateTime);
     }
   }
 }

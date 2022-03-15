@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class FormatModel {
   late final String label;
   late final TextInputType textInputType;
-  late TextEditingController textEditingController;
+  late final TextEditingController textEditingController;
+  late final List<TextInputFormatter> inputFormatters;
+  late final FocusNode focusNode;
 
-  FormatModel({required this.label, required this.textInputType})
-      : textEditingController = TextEditingController();
+  FormatModel({
+    required this.label,
+    required this.textInputType,
+    this.inputFormatters = const [],
+  })  : textEditingController = TextEditingController(),
+        focusNode = FocusNode();
 
   Map<String, dynamic> toJson() => {
         "label": label,
